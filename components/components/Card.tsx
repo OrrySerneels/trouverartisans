@@ -1,1 +1,0 @@
-// Placeholder voor Card.tsx
