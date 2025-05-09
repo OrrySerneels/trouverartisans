@@ -1,34 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { transporter } from '@/lib/mailer';
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { transporter } from '../../lib/mailer' // ✅ correcte relatieve import
 
-export async function POST(req: NextRequest) {
-  const data = await req.formData();
-  const name = data.get('nom') as string;
-  const email = data.get('email') as string;
-  const postal = data.get('codePostal') as string;
-  const description = data.get('description') as string;
-  const file = data.get('fichier') as File;
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).end('Méthode non autorisée')
+  }
 
-  const fileBuffer = Buffer.from(await file.arrayBuffer());
+  const { nom, email, codePostal, description } = req.body
 
   const mailOptions = {
     from: process.env.SMTP_USER,
-    to: `info@serneels.ch, ${email}`,
-    subject: `Nouvelle demande client de ${name}`,
-    text: `Nom: ${name}\nEmail: ${email}\nCode postal: ${postal}\n\nDescription:\n${description}`,
-    attachments: [
-      {
-        filename: file.name,
-        content: fileBuffer,
-      },
-    ],
-  };
+    to: [process.env.ADMIN_EMAIL, email],
+    subject: 'Nouvelle demande client via TrouverArtisans.ch',
+    text: `
+Nom: ${nom}
+E-mail: ${email}
+Code postal: ${codePostal}
+Description de la demande: ${description}
+    `,
+  }
 
   try {
-    await transporter.sendMail(mailOptions);
-    return NextResponse.json({ success: true });
+    await transporter.sendMail(mailOptions)
+    res.status(200).json({ message: 'Demande envoyée avec succès' })
   } catch (error) {
-    console.error('Mail error:', error);
-    return NextResponse.json({ success: false }, { status: 500 });
+    console.error('Erreur lors de l’envoi du mail :', error)
+    res.status(500).json({ error: 'Erreur lors de l’envoi du mail' })
   }
 }
