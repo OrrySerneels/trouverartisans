@@ -1,0 +1,6 @@
+SMTP_HOST=smtp.infomaniak.com
+SMTP_USER=orry@serneels.ch
+SMTP_PASS=S3rne3ls
+STRIPE_SECRET_KEY=sk_test_xxx
+STRIPE_PRICE_ID=price_xxx
+ADMIN_EMAIL=orry@serneels.ch
