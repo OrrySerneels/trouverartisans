@@ -2,21 +2,25 @@
 
 import { useState } from 'react'
 
-export default function ArtisanPage() {
+export default function ArtisanForm() {
   const [formData, setFormData] = useState({
     nom: '',
     email: '',
     telephone: '',
     categorie: '',
-    rcPro: null as File | null,
     zones: '',
     conditions: false,
   })
 
-  const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [file, setFile] = useState<File | null>(null)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const target = e.target as HTMLInputElement
+    const { name, value, type } = target
+    const checked = type === 'checkbox' ? target.checked : undefined
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -24,75 +28,62 @@ export default function ArtisanPage() {
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, rcPro: e.target.files?.[0] || null })
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0])
+    }
   }
 
-  const validate = () => {
-    const newErrors: { [key: string]: string } = {}
-    if (!formData.nom) newErrors.nom = 'Champ requis'
-    if (!formData.email) newErrors.email = 'Champ requis'
-    if (!formData.telephone) newErrors.telephone = 'Champ requis'
-    if (!formData.categorie) newErrors.categorie = 'Champ requis'
-    if (!formData.rcPro) newErrors.rcPro = 'Fichier requis'
-    if (!formData.conditions) newErrors.conditions = 'Vous devez accepter les conditions'
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validate()) return
-    alert('Formulaire soumis avec succès')
+
+    const data = new FormData()
+    Object.entries(formData).forEach(([key, value]) => {
+      if (typeof value !== 'undefined') {
+        data.append(key, String(value))
+      }
+    })
+    if (file) {
+      data.append('file', file)
+    }
+
+    const res = await fetch('/api/send-artisan', {
+      method: 'POST',
+      body: data,
+    })
+
+    if (res.ok) {
+      alert('Demande envoyée avec succès')
+    } else {
+      alert('Erreur lors de l’envoi')
+    }
   }
 
   return (
-    <main className="max-w-xl mx-auto mt-10 p-6 border border-gray-200 rounded-lg shadow-sm">
-      <h1 className="text-2xl font-bold mb-6">Inscription artisan</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block mb-1">Nom</label>
-          <input name="nom" value={formData.nom} onChange={handleChange} className="w-full border p-2 rounded" />
-          {errors.nom && <p className="text-red-600 text-sm">{errors.nom}</p>}
-        </div>
-        <div>
-          <label className="block mb-1">E-mail</label>
-          <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full border p-2 rounded" />
-          {errors.email && <p className="text-red-600 text-sm">{errors.email}</p>}
-        </div>
-        <div>
-          <label className="block mb-1">Téléphone</label>
-          <input name="telephone" value={formData.telephone} onChange={handleChange} className="w-full border p-2 rounded" />
-          {errors.telephone && <p className="text-red-600 text-sm">{errors.telephone}</p>}
-        </div>
-        <div>
-          <label className="block mb-1">Catégorie</label>
-          <select name="categorie" value={formData.categorie} onChange={handleChange} className="w-full border p-2 rounded">
-            <option value="">-- Sélectionnez --</option>
-            <option value="Gros œuvre">Gros œuvre</option>
-            <option value="Second œuvre">Second œuvre</option>
-            <option value="Électricité">Électricité</option>
-            <option value="Sanitaire">Sanitaire</option>
-            <option value="Jardin / extérieur">Jardin / extérieur</option>
-            <option value="Autres">Autres</option>
-          </select>
-          {errors.categorie && <p className="text-red-600 text-sm">{errors.categorie}</p>}
-        </div>
-        <div>
-          <label className="block mb-1">Pièce jointe RC PRO (obligatoire)</label>
-          <input type="file" onChange={handleFileChange} className="w-full" />
-          {errors.rcPro && <p className="text-red-600 text-sm">{errors.rcPro}</p>}
-        </div>
-        <div>
-          <label className="block mb-1">Zones desservies (optionnel)</label>
-          <textarea name="zones" value={formData.zones} onChange={handleChange} className="w-full border p-2 rounded" rows={3} />
-        </div>
-        <div className="flex items-start space-x-2">
-          <input type="checkbox" name="conditions" checked={formData.conditions} onChange={handleChange} />
-          <label className="text-sm">J'accepte les conditions générales</label>
-        </div>
-        {errors.conditions && <p className="text-red-600 text-sm">{errors.conditions}</p>}
-        <button type="submit" className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Envoyer</button>
-      </form>
-    </main>
+    <form onSubmit={handleSubmit} className="max-w-xl mx-auto p-4 space-y-4">
+      <input name="nom" onChange={handleChange} placeholder="Nom" className="w-full p-2 border" />
+      <input name="email" type="email" onChange={handleChange} placeholder="E-mail" className="w-full p-2 border" />
+      <input name="telephone" onChange={handleChange} placeholder="Téléphone" className="w-full p-2 border" />
+
+      <select name="categorie" onChange={handleChange} className="w-full p-2 border">
+        <option value="">Sélectionner une catégorie</option>
+        <option value="Gros œuvre">Gros œuvre</option>
+        <option value="Second œuvre">Second œuvre</option>
+        <option value="Électricité">Électricité</option>
+        <option value="Sanitaire">Sanitaire</option>
+        <option value="Jardin / extérieur">Jardin / extérieur</option>
+        <option value="Autres">Autres</option>
+      </select>
+
+      <input type="file" onChange={handleFileChange} className="w-full" />
+
+      <textarea name="zones" onChange={handleChange} placeholder="Zones desservies (optionnel)" className="w-full p-2 border" />
+
+      <label className="flex items-center">
+        <input type="checkbox" name="conditions" onChange={handleChange} className="mr-2" />
+        J'accepte les conditions générales
+      </label>
+
+      <button type="submit" className="bg-black text-white px-4 py-2">Envoyer</button>
+    </form>
   )
 }
